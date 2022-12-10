@@ -1,0 +1,23 @@
+pipeline{
+    agent any
+    stages{
+        stage('Cleaning Old Code'){
+            steps{
+                sh 'ssh ec2-user@13.234.131.230 "sudo rm -rf /var/www/html/cgts/*"'
+            }
+        }
+        stage('Deploying New Code'){
+            steps{
+                sh 'scp -r /var/lib/jenkins/workspace/prod-cgts/* ec2-user@13.234.131.230:/var/www/html/cgts/'
+            }
+        }
+        stage('Notifying Developers'){
+            steps{
+                echo 'Email Notification has been sent....'
+            }
+        }
+    }
+
+
+
+}

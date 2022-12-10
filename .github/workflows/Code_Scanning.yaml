@@ -1,0 +1,74 @@
+name: Code_Scanning
+
+on: push
+
+jobs:
+
+  Secrets:
+ 
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Dumping Source Code
+        uses: actions/checkout@v2
+
+# ~~~~~~~~~~~~~~~~~~~ Secret Scanning ~~~~~~~~~~~~~~~~~~~
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+# ~~~~~~~~~~~~~~~~~~~ SAST Scan ~~~~~~~~~~~~~~~~~~~
+
+  SAST:
+ 
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Dumping Source Code
+        uses: actions/checkout@v2
+
+      - name: SAST Scanning 
+        run: |
+          wget https://altushost-swe.dl.sourceforge.net/project/awap/wap-2.1/wap-2.1.zip 
+          unzip wap-2.1.zip
+          cd wap-2.1/
+          ls -la 
+          ./wap -all -out report.txt -p ../support-master/
+
+      - name: Archiving SAST scan reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: WAP-SAST-Report
+          path: |
+            wap-2.1/report.txt
+            support-master/NewFiles/
+
+  Dependency:
+ 
+    runs-on: ubuntu-latest
+
+    steps:
+
+# ~~~~~~~~~~~~~~~~~~~ Dumping Code ~~~~~~~~~~~~~~~~~~~
+
+      - name: Checking out code
+        uses: actions/checkout@v2
+
+# ~~~~~~~~~~~~~~~~~~~ SCA / Dependency Scanning ~~~~~~~~~~~~~~~~~~~
+
+
+      - name: Dependency Scan
+        uses: ShiftLeftSecurity/scan-action@master
+        with:
+          type: "credscan,depscan"
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Uploading Scan Reports 
+        uses: actions/upload-artifact@v1
+        with:
+          name: Dependency-and-Secret-Reports
+          path: reports
