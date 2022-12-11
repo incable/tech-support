@@ -1,7 +1,8 @@
-name: incable-web
+name: tech-support
 
 on: 
   workflow_dispatch:
+
 
 jobs:
   Build:
@@ -13,7 +14,7 @@ jobs:
       - name: Checking out code
         uses: actions/checkout@v2
 
-      - name: echoing the file name
+      - name: Echoing the file name
         run: echo $GITHUB_WORKFLOW:$GITHUB_RUN_ID
         
       - name: Building Docker Images
@@ -27,3 +28,26 @@ jobs:
           docker image push ${{secrets.DOCKER_REPO}}/$GITHUB_WORKFLOW:$GITHUB_RUN_ID
           docker image push ${{secrets.DOCKER_REPO}}/$GITHUB_WORKFLOW:latest
           docker image rmi $GITHUB_WORKFLOW:$GITHUB_RUN_ID ${{secrets.DOCKER_REPO}}/$GITHUB_WORKFLOW:$GITHUB_RUN_ID ${{secrets.DOCKER_REPO}}/$GITHUB_WORKFLOW:latest
+  Deploy:      
+  
+    needs: [Build]
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+
+      - name: Deploying the Docker on the server
+        env: 
+          PRIVATE_KEY: ${{secrets.SSH_KEY}}
+          HOSTNAME: ${{secrets.SSH_HOST}}
+          USER_NAME: ${{secrets.SSH_USER}}
+          
+        run: |
+          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+          ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} '
+            sudo docker login -u ${{secrets.DOCKER_USER}} -p ${{secrets.DOCKER_PASSWORD}} 
+            sudo docker container rm -f tech-support-server
+            sudo docker system prune -a -f
+            sudo docker run -p 80:80 -d --restart unless-stopped --name tech-support-server ${{secrets.DOCKER_REPO}}/tech-support:latest
+            '
+  
